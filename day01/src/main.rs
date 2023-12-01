@@ -8,6 +8,26 @@ fn main() {
     part2(&text);
 }
 
-fn part1(text: &str) {}
+fn part1(text: &str) {
+    println!(
+        "{}",
+        text.lines()
+            .map(|line| {
+                line.chars()
+                    .find(|c| c.is_digit(10))
+                    .expect("No digits found")
+                    .to_digit(10)
+                    .unwrap()
+                    * 10
+                    + line
+                        .chars()
+                        .rfind(|c| c.is_digit(10))
+                        .expect("No digits found")
+                        .to_digit(10)
+                        .unwrap()
+            })
+            .sum::<u32>()
+    );
+}
 
 fn part2(text: &str) {}
