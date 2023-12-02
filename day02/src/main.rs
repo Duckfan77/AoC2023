@@ -57,6 +57,10 @@ impl Seen {
     fn possible(&self, bag: &Seen) -> bool {
         self.red <= bag.red && self.green <= bag.green && self.blue <= bag.blue
     }
+
+    fn power(&self) -> i32 {
+        self.red * self.green * self.blue
+    }
 }
 
 const PART1_BAG: Seen = Seen {
@@ -82,4 +86,13 @@ fn part1(text: &str) {
     );
 }
 
-fn part2(_text: &str) {}
+fn part2(text: &str) {
+    println!(
+        "{}",
+        text.lines()
+            .map(|line| {
+                Seen::from_game(line.split_once(": ").expect("no colon found").1).power()
+            })
+            .sum::<i32>()
+    );
+}
