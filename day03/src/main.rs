@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
     let text = include_str!("../input");
@@ -62,7 +62,6 @@ impl Schematic {
         let mut out = Self::new();
 
         for (row_n, row) in text.lines().enumerate() {
-            let length = row.len();
             let mut number = 0;
             let mut number_start: Option<usize> = None;
             for (col_n, c) in row.chars().enumerate() {
@@ -146,13 +145,45 @@ impl Schematic {
 
         sum
     }
+
+    fn gear_product_sum(&self) -> i32 {
+        let mut sum = 0;
+
+        for ((row_n, col_n), _) in self.grid.iter().filter(|((_, _), cell)| {
+            if let Cell::Symbol('*') = cell {
+                true
+            } else {
+                false
+            }
+        }) {
+            let mut indices = HashSet::new();
+            for row_offset in -1..=1 {
+                for col_offset in -1..=1 {
+                    if let Some(Cell::NumberCell(index)) =
+                        self.grid.get(&(row_n + row_offset, col_n + col_offset))
+                    {
+                        indices.insert(*index);
+                    }
+                }
+            }
+            if indices.len() == 2 {
+                sum += indices
+                    .iter()
+                    .map(|i| self.numbers[*i].number)
+                    .product::<i32>();
+            }
+        }
+
+        sum
+    }
 }
 
 fn part1(text: &str) {
     let mut s = Schematic::from_str(text);
     println!("{}", s.engine_sum());
-
-    //println!("{:#?}", s.numbers);
 }
 
-fn part2(_text: &str) {}
+fn part2(text: &str) {
+    let s = Schematic::from_str(text);
+    println!("{}", s.gear_product_sum());
+}
