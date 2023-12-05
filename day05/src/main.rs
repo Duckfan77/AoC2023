@@ -143,10 +143,9 @@ fn part2(text: &str) {
             .skip(1)
             .map(|seed| seed.parse::<i64>().unwrap())
             .tuples()
-            .par_bridge()
             .map(|(start, len)| {
                 (start..(start + len))
-                    .into_iter()
+                    .into_par_iter()
                     .map(|seed| almanac.run_alamanac_map(&seed))
                     .min()
                     .unwrap()
