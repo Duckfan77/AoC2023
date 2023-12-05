@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::ops::Range;
 
 fn main() {
@@ -142,10 +143,13 @@ fn part2(text: &str) {
             .skip(1)
             .map(|seed| seed.parse::<i64>().unwrap())
             .tuples()
-            .flat_map(|(start, len)| {
+            .par_bridge()
+            .map(|(start, len)| {
                 (start..(start + len))
                     .into_iter()
                     .map(|seed| almanac.run_alamanac_map(&seed))
+                    .min()
+                    .unwrap()
             })
             .min()
             .unwrap()
