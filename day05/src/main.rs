@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::ops::Range;
 
 fn main() {
@@ -13,7 +14,6 @@ fn main() {
 struct MapEntry {
     dest_start: i64,
     source_range: Range<i64>,
-    range_len: i64,
 }
 
 impl MapEntry {
@@ -21,11 +21,10 @@ impl MapEntry {
         let (dest, remainder) = row.split_once(" ").unwrap();
         let (source, len) = remainder.split_once(" ").unwrap();
         let source = source.parse().unwrap();
-        let len = len.parse().unwrap();
+        let len: i64 = len.parse().unwrap();
         Self {
             dest_start: dest.parse().unwrap(),
             source_range: source..(source + len),
-            range_len: len,
         }
     }
 
@@ -132,4 +131,23 @@ fn part1(text: &str) {
     );
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    let almanac = Almanac::from_input(text);
+    println!(
+        "{}",
+        text.lines()
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .skip(1)
+            .map(|seed| seed.parse::<i64>().unwrap())
+            .tuples()
+            .flat_map(|(start, len)| {
+                (start..(start + len))
+                    .into_iter()
+                    .map(|seed| almanac.run_alamanac_map(&seed))
+            })
+            .min()
+            .unwrap()
+    );
+}
