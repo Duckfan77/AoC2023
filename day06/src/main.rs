@@ -49,4 +49,9 @@ fn part1(text: &str) {
     );
 }
 
-fn part2(text: &str) {}
+fn part2(_text: &str) {
+    println!(
+        "{}",
+        Race::new(48_98_90_83, 390_1103_1112_1360).ways_to_beat()
+    )
+}
