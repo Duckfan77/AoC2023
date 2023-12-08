@@ -77,6 +77,79 @@ impl Map {
     }
 }
 
+#[derive(Debug, Clone)]
+struct IntNode {
+    index: usize,
+    is_end: bool,
+    left: usize,
+    right: usize,
+}
+
+struct MapSet {
+    map: Vec<IntNode>,
+    states: Vec<usize>,
+}
+
+impl MapSet {
+    fn from_body(body: &str) -> Self {
+        let string_map: HashMap<String, Node> = body
+            .lines()
+            .map(|line| Node::from_line(line))
+            .map(|node| (node.name.clone(), node))
+            .collect();
+        let name_map: HashMap<String, usize> = string_map
+            .keys()
+            .cloned()
+            .enumerate()
+            .map(|(i, s)| (s, i))
+            .collect();
+        let mut map: Vec<_> = name_map
+            .iter()
+            .map(|(name, index)| {
+                let str_node = string_map.get(name).unwrap();
+                IntNode {
+                    index: *index,
+                    is_end: name.ends_with('Z'),
+                    left: *name_map.get(&str_node.left).unwrap(),
+                    right: *name_map.get(&str_node.right).unwrap(),
+                }
+            })
+            .collect();
+        map.sort_by_key(|node| node.index);
+
+        let states = name_map
+            .iter()
+            .filter_map(|(name, index)| {
+                if name.ends_with('A') {
+                    Some(*index)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        //println!("{:?}\n{:?}\n{:?}\n", name_map, map, states);
+
+        Self { map, states }
+    }
+
+    fn is_complete(&self) -> bool {
+        self.states.iter().all(|index| self.map[*index].is_end)
+    }
+
+    fn step_all(&mut self, dir: &Direction) -> bool {
+        //println!("{:?}", self.states);
+        for state in self.states.iter_mut() {
+            *state = match dir {
+                Direction::Left => self.map[*state].left,
+                Direction::Right => self.map[*state].right,
+            }
+        }
+
+        self.is_complete()
+    }
+}
+
 fn part1(text: &str) {
     let (instructions, body) = text.split_once("\n\n").unwrap();
     let mut map = Map::from_body(body);
@@ -93,4 +166,18 @@ fn part1(text: &str) {
     println!("{}", count);
 }
 
-fn part2(_text: &str) {}
+fn part2(text: &str) {
+    let (instructions, body) = text.split_once("\n\n").unwrap();
+    let mut maps = MapSet::from_body(body);
+    let instructions: Vec<Direction> = instructions.chars().map(|c| c.into()).collect();
+
+    let mut count = 0;
+    for (step, dir) in instructions.iter().cycle().enumerate() {
+        if maps.step_all(dir) {
+            count = step + 1;
+            break;
+        }
+    }
+
+    println!("{}", count);
+}
