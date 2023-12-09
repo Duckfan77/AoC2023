@@ -53,7 +53,7 @@ impl Sequence {
 
     fn extrapolate_backward(&mut self) -> i64 {
         if self.list.iter().all(|n| *n == 0) {
-            self.extrapolated_forward = Some(0);
+            self.extrapolated_backward = Some(0);
             return 0;
         }
 
@@ -62,8 +62,8 @@ impl Sequence {
             Sequence::from_iter(self.list.iter().tuple_windows().map(|(a, b)| b - a));
         let diff = diff_seq.extrapolate_backward();
 
-        self.extrapolated_forward = Some(first - diff);
-        self.extrapolated_forward.unwrap()
+        self.extrapolated_backward = Some(first - diff);
+        self.extrapolated_backward.unwrap()
     }
 }
 
