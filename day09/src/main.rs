@@ -12,7 +12,8 @@ fn main() {
 
 struct Sequence {
     list: Vec<i64>,
-    extrapolated: Option<i64>,
+    extrapolated_forward: Option<i64>,
+    extrapolated_backward: Option<i64>,
 }
 
 impl Sequence {
@@ -22,30 +23,47 @@ impl Sequence {
                 .split_whitespace()
                 .map(|n| n.parse().unwrap())
                 .collect(),
-            extrapolated: None,
+            extrapolated_forward: None,
+            extrapolated_backward: None,
         }
     }
 
     fn from_iter(line: impl Iterator<Item = i64>) -> Self {
         Self {
             list: line.collect(),
-            extrapolated: None,
+            extrapolated_forward: None,
+            extrapolated_backward: None,
         }
     }
 
-    fn extrapolate(&mut self) -> i64 {
+    fn extrapolate_forward(&mut self) -> i64 {
         if self.list.iter().all(|n| *n == 0) {
-            self.extrapolated = Some(0);
+            self.extrapolated_forward = Some(0);
             return 0;
         }
 
         let last = self.list.last().unwrap();
         let mut diff_seq =
             Sequence::from_iter(self.list.iter().tuple_windows().map(|(a, b)| b - a));
-        let diff = diff_seq.extrapolate();
+        let diff = diff_seq.extrapolate_forward();
 
-        self.extrapolated = Some(diff + last);
-        self.extrapolated.unwrap()
+        self.extrapolated_forward = Some(diff + last);
+        self.extrapolated_forward.unwrap()
+    }
+
+    fn extrapolate_backward(&mut self) -> i64 {
+        if self.list.iter().all(|n| *n == 0) {
+            self.extrapolated_forward = Some(0);
+            return 0;
+        }
+
+        let first = self.list.first().unwrap();
+        let mut diff_seq =
+            Sequence::from_iter(self.list.iter().tuple_windows().map(|(a, b)| b - a));
+        let diff = diff_seq.extrapolate_backward();
+
+        self.extrapolated_forward = Some(first - diff);
+        self.extrapolated_forward.unwrap()
     }
 }
 
@@ -53,9 +71,16 @@ fn part1(text: &str) {
     println!(
         "{}",
         text.lines()
-            .map(|line| Sequence::from_line(line).extrapolate())
+            .map(|line| Sequence::from_line(line).extrapolate_forward())
             .sum::<i64>()
     );
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    println!(
+        "{}",
+        text.lines()
+            .map(|line| Sequence::from_line(line).extrapolate_backward())
+            .sum::<i64>()
+    );
+}
