@@ -43,15 +43,15 @@ impl Point {
     }
 }
 
-fn part1(text: &str) {
-    let mut space = DMatrix::from_row_iterator(
+fn day11_core(text: &str, growth_factor: usize) -> usize {
+    let space = DMatrix::from_row_iterator(
         text.lines().count(),
         text.lines().next().unwrap().chars().count(),
         text.lines()
             .flat_map(|line| line.chars().map(|c| Space::from_char(&c))),
     );
 
-    let cols_to_double: Vec<_> = space
+    let cols_to_grow: Vec<_> = space
         .column_iter()
         .enumerate()
         .filter_map(|(n, col)| {
@@ -63,11 +63,7 @@ fn part1(text: &str) {
         })
         .collect();
 
-    for n in cols_to_double.iter().rev() {
-        space = space.insert_column(*n, Space::Empty);
-    }
-
-    let rows_to_double: Vec<_> = space
+    let rows_to_grow: Vec<_> = space
         .row_iter()
         .enumerate()
         .filter_map(|(n, row)| {
@@ -79,14 +75,22 @@ fn part1(text: &str) {
         })
         .collect();
 
-    for n in rows_to_double.iter().rev() {
-        space = space.insert_row(*n, Space::Empty);
-    }
-
     let mut galaxies: Vec<Point> = Vec::new();
-    for (coln, col) in space.column_iter().enumerate() {
-        for (rown, space) in col.iter().enumerate() {
+    for (rown, row) in space.row_iter().enumerate() {
+        for (coln, space) in row.iter().enumerate() {
             if *space == Space::Galaxy {
+                let rown = rown
+                    + rows_to_grow
+                        .iter()
+                        .filter(|growth_row| rown > **growth_row)
+                        .count()
+                        * (growth_factor - 1);
+                let coln = coln
+                    + cols_to_grow
+                        .iter()
+                        .filter(|growth_col| coln > **growth_col)
+                        .count()
+                        * (growth_factor - 1);
                 galaxies.push(Point::new(rown, coln));
             }
         }
@@ -98,8 +102,17 @@ fn part1(text: &str) {
             sum += galaxies[i].manhattan_dist(&galaxies[j]);
         }
     }
+    sum
+}
+
+fn part1(text: &str) {
+    let sum = day11_core(text, 2);
 
     println!("{}", sum);
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    let sum = day11_core(text, 1_000_000);
+
+    println!("{}", sum);
+}
