@@ -70,6 +70,40 @@ impl Pattern {
     pub fn reflect(&self) -> usize {
         self.col_reflect() + 100 * self.row_reflect()
     }
+
+    pub fn smudged_row_reflect(&self) -> usize {
+        let rows = self.pattern.row_iter().collect::<Vec<_>>();
+        for i in 1..self.pattern.nrows() {
+            let left = &rows[0..i];
+            let right = &rows[i..];
+            if left.iter().rev().zip(right.iter()).fold(0, |acc, (l, r)| {
+                l.iter().zip(r.iter()).filter(|(a, b)| a != b).count() + acc
+            }) == 1
+            {
+                return i;
+            }
+        }
+        0
+    }
+
+    pub fn smudged_col_reflect(&self) -> usize {
+        let cols = self.pattern.column_iter().collect::<Vec<_>>();
+        for i in 1..self.pattern.ncols() {
+            let left = &cols[0..i];
+            let right = &cols[i..];
+            if left.iter().rev().zip(right.iter()).fold(0, |acc, (l, r)| {
+                l.iter().zip(r.iter()).filter(|(a, b)| a != b).count() + acc
+            }) == 1
+            {
+                return i;
+            }
+        }
+        0
+    }
+
+    pub fn smudged_reflect(&self) -> usize {
+        self.smudged_col_reflect() + 100 * self.smudged_row_reflect()
+    }
 }
 
 fn part1(text: &str) {
@@ -81,4 +115,11 @@ fn part1(text: &str) {
     );
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    println!(
+        "{}",
+        text.split("\n\n")
+            .map(|block| Pattern::from_block(block).smudged_reflect())
+            .sum::<usize>()
+    );
+}
