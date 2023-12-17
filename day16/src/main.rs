@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::max, collections::HashMap};
 
 fn main() {
     let text = include_str!("../input");
@@ -203,6 +203,10 @@ impl ContraptionState {
         }
     }
 
+    fn set_starting_beam(&mut self, beam: BeamTip) {
+        self.beams = vec![beam];
+    }
+
     fn has_beams(&self) -> bool {
         !self.beams.is_empty()
     }
@@ -232,4 +236,40 @@ fn part1(text: &str) {
     println!("{}", contraption.count_energized());
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    let nrows = text.lines().count() as isize;
+    let ncols = text.lines().next().unwrap().chars().count() as isize;
+    let mut best = 0;
+
+    // top and bottom
+    for col in 0..ncols {
+        // top
+        let mut contraption = ContraptionState::from_input(text);
+        contraption.set_starting_beam(BeamTip::new(Location::new(0, col), Direction::Down));
+        contraption.run_beams();
+        best = max(best, contraption.count_energized());
+
+        // bottom
+        let mut contraption = ContraptionState::from_input(text);
+        contraption.set_starting_beam(BeamTip::new(Location::new(ncols - 1, col), Direction::Up));
+        contraption.run_beams();
+        best = max(best, contraption.count_energized());
+    }
+
+    // left and right
+    for row in 0..nrows {
+        // left
+        let mut contraption = ContraptionState::from_input(text);
+        contraption.set_starting_beam(BeamTip::new(Location::new(row, 0), Direction::Right));
+        contraption.run_beams();
+        best = max(best, contraption.count_energized());
+
+        // right
+        let mut contraption = ContraptionState::from_input(text);
+        contraption.set_starting_beam(BeamTip::new(Location::new(row, ncols - 1), Direction::Left));
+        contraption.run_beams();
+        best = max(best, contraption.count_energized());
+    }
+
+    println!("{}", best);
+}
