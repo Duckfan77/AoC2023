@@ -124,6 +124,8 @@ impl Map {
 
     fn construct_part1_edges(&mut self) {
         use Direction as Dir;
+        assert_eq!(self.nlayers, PART1_LAYERS);
+
         // special case, start node isn't in any layers
         {
             let down_node = *self.down_nodes[0].lookup_adjacent(0, 0, Dir::Down).unwrap();
@@ -135,41 +137,177 @@ impl Map {
         }
 
         // special case, end node isn't in any layers
-        {
-            for layer in 0..self.nlayers {
-                self.add_edge(
-                    *self.up_nodes[layer]
-                        .lookup_node(self.nrows - 1, self.ncols - 1)
-                        .unwrap(),
-                    self.end,
-                );
-                self.add_edge(
-                    *self.down_nodes[layer]
-                        .lookup_node(self.nrows - 1, self.ncols - 1)
-                        .unwrap(),
-                    self.end,
-                );
-                self.add_edge(
-                    *self.left_nodes[layer]
-                        .lookup_node(self.nrows - 1, self.ncols - 1)
-                        .unwrap(),
-                    self.end,
-                );
-                self.add_edge(
-                    *self.right_nodes[layer]
-                        .lookup_node(self.nrows - 1, self.ncols - 1)
-                        .unwrap(),
-                    self.end,
-                );
-            }
+        for layer in 0..self.nlayers {
+            self.add_edge(
+                *self.up_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.down_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.left_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.right_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
         }
 
         // handle nodes going up
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.up_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(lnode) = self.left_nodes[0].lookup_adjacent(row, col, Dir::Left) {
+                        self.add_edge(start, *lnode);
+                    }
+                    if let Some(rnode) = self.right_nodes[0].lookup_adjacent(row, col, Dir::Right) {
+                        self.add_edge(start, *rnode);
+                    }
+                    if let Some(unode) = self
+                        .up_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Up))
+                    {
+                        self.add_edge(start, *unode);
+                    }
+                }
+            }
+        }
+
+        // handle nodes going down
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.down_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(lnode) = self.left_nodes[0].lookup_adjacent(row, col, Dir::Left) {
+                        self.add_edge(start, *lnode);
+                    }
+                    if let Some(rnode) = self.right_nodes[0].lookup_adjacent(row, col, Dir::Right) {
+                        self.add_edge(start, *rnode);
+                    }
+                    if let Some(dnode) = self
+                        .down_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Down))
+                    {
+                        self.add_edge(start, *dnode);
+                    }
+                }
+            }
+        }
+
+        // handle nodes going left
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.left_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(unode) = self.up_nodes[0].lookup_adjacent(row, col, Dir::Up) {
+                        self.add_edge(start, *unode);
+                    }
+                    if let Some(dnode) = self.down_nodes[0].lookup_adjacent(row, col, Dir::Down) {
+                        self.add_edge(start, *dnode);
+                    }
+                    if let Some(lnode) = self
+                        .left_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Left))
+                    {
+                        self.add_edge(start, *lnode);
+                    }
+                }
+            }
+        }
+
+        // handle nodes going right
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.right_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(unode) = self.up_nodes[0].lookup_adjacent(row, col, Dir::Up) {
+                        self.add_edge(start, *unode);
+                    }
+                    if let Some(dnode) = self.down_nodes[0].lookup_adjacent(row, col, Dir::Down) {
+                        self.add_edge(start, *dnode);
+                    }
+                    if let Some(rnode) = self
+                        .right_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Right))
+                    {
+                        self.add_edge(start, *rnode);
+                    }
+                }
+            }
+        }
+    }
+
+    fn construct_part2_edges(&mut self) {
+        use Direction as Dir;
+        assert_eq!(self.nlayers, PART2_LAYERS);
+
+        // special case, start node isn't in any layers
         {
-            for layer in 0..self.nlayers {
-                for row in 0..self.nrows {
-                    for col in 0..self.ncols {
-                        let start = *self.up_nodes[layer].lookup_node(row, col).unwrap();
+            let down_node = *self.down_nodes[0].lookup_adjacent(0, 0, Dir::Down).unwrap();
+            let right_node = *self.right_nodes[0]
+                .lookup_adjacent(0, 0, Dir::Right)
+                .unwrap();
+            self.add_edge(self.start, down_node);
+            self.add_edge(self.start, right_node);
+        }
+
+        // special case, end node isn't in any layers
+        for layer in PART2_CANT_TURN..self.nlayers {
+            self.add_edge(
+                *self.up_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.down_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.left_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+            self.add_edge(
+                *self.right_nodes[layer]
+                    .lookup_node(self.nrows - 1, self.ncols - 1)
+                    .unwrap(),
+                self.end,
+            );
+        }
+
+        // handle nodes going up
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.up_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(unode) = self
+                        .up_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Up))
+                    {
+                        self.add_edge(start, *unode);
+                    }
+                    if layer >= PART2_CANT_TURN {
                         if let Some(lnode) = self.left_nodes[0].lookup_adjacent(row, col, Dir::Left)
                         {
                             self.add_edge(start, *lnode);
@@ -178,13 +316,6 @@ impl Map {
                             self.right_nodes[0].lookup_adjacent(row, col, Dir::Right)
                         {
                             self.add_edge(start, *rnode);
-                        }
-                        if let Some(unode) = self
-                            .up_nodes
-                            .get(layer + 1)
-                            .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Up))
-                        {
-                            self.add_edge(start, *unode);
                         }
                     }
                 }
@@ -192,11 +323,18 @@ impl Map {
         }
 
         // handle nodes going down
-        {
-            for layer in 0..self.nlayers {
-                for row in 0..self.nrows {
-                    for col in 0..self.ncols {
-                        let start = *self.down_nodes[layer].lookup_node(row, col).unwrap();
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.down_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(dnode) = self
+                        .down_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Down))
+                    {
+                        self.add_edge(start, *dnode);
+                    }
+                    if layer >= PART2_CANT_TURN {
                         if let Some(lnode) = self.left_nodes[0].lookup_adjacent(row, col, Dir::Left)
                         {
                             self.add_edge(start, *lnode);
@@ -206,37 +344,30 @@ impl Map {
                         {
                             self.add_edge(start, *rnode);
                         }
-                        if let Some(dnode) = self
-                            .down_nodes
-                            .get(layer + 1)
-                            .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Down))
-                        {
-                            self.add_edge(start, *dnode);
-                        }
                     }
                 }
             }
         }
 
         // handle nodes going left
-        {
-            for layer in 0..self.nlayers {
-                for row in 0..self.nrows {
-                    for col in 0..self.ncols {
-                        let start = *self.left_nodes[layer].lookup_node(row, col).unwrap();
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.left_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(lnode) = self
+                        .left_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Left))
+                    {
+                        self.add_edge(start, *lnode);
+                    }
+                    if layer >= PART2_CANT_TURN {
                         if let Some(unode) = self.up_nodes[0].lookup_adjacent(row, col, Dir::Up) {
                             self.add_edge(start, *unode);
                         }
                         if let Some(dnode) = self.down_nodes[0].lookup_adjacent(row, col, Dir::Down)
                         {
                             self.add_edge(start, *dnode);
-                        }
-                        if let Some(lnode) = self
-                            .left_nodes
-                            .get(layer + 1)
-                            .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Left))
-                        {
-                            self.add_edge(start, *lnode);
                         }
                     }
                 }
@@ -244,24 +375,24 @@ impl Map {
         }
 
         // handle nodes going right
-        {
-            for layer in 0..self.nlayers {
-                for row in 0..self.nrows {
-                    for col in 0..self.ncols {
-                        let start = *self.right_nodes[layer].lookup_node(row, col).unwrap();
+        for layer in 0..self.nlayers {
+            for row in 0..self.nrows {
+                for col in 0..self.ncols {
+                    let start = *self.right_nodes[layer].lookup_node(row, col).unwrap();
+                    if let Some(rnode) = self
+                        .right_nodes
+                        .get(layer + 1)
+                        .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Right))
+                    {
+                        self.add_edge(start, *rnode);
+                    }
+                    if layer >= PART2_CANT_TURN {
                         if let Some(unode) = self.up_nodes[0].lookup_adjacent(row, col, Dir::Up) {
                             self.add_edge(start, *unode);
                         }
                         if let Some(dnode) = self.down_nodes[0].lookup_adjacent(row, col, Dir::Down)
                         {
                             self.add_edge(start, *dnode);
-                        }
-                        if let Some(rnode) = self
-                            .right_nodes
-                            .get(layer + 1)
-                            .and_then(|layer| layer.lookup_adjacent(row, col, Dir::Right))
-                        {
-                            self.add_edge(start, *rnode);
                         }
                     }
                 }
@@ -276,10 +407,19 @@ impl Map {
     }
 }
 
+static PART1_LAYERS: usize = 3;
+
 fn part1(text: &str) {
-    let mut map = Map::with_layers(3, text);
+    let mut map = Map::with_layers(PART1_LAYERS, text);
     map.construct_part1_edges();
     println!("{}", map.find_cost());
 }
 
-fn part2(_text: &str) {}
+static PART2_LAYERS: usize = 10;
+static PART2_CANT_TURN: usize = 3;
+
+fn part2(text: &str) {
+    let mut map = Map::with_layers(PART2_LAYERS, text);
+    map.construct_part2_edges();
+    println!("{}", map.find_cost());
+}
