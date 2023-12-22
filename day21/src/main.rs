@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 fn main() {
@@ -60,6 +61,13 @@ impl Location {
         .iter()
         .map(|dir| self.move_in_dir(dir))
     }
+
+    fn mod_sizes(&self, rowcap: isize, colcap: isize) -> Self {
+        Self {
+            row: self.row.rem_euclid(rowcap),
+            col: self.col.rem_euclid(colcap),
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -81,7 +89,11 @@ impl Plot {
 struct Map {
     steps_taken: usize,
     plots: HashMap<Location, Plot>,
-    current_locations: HashSet<Location>,
+    new_locations: HashSet<Location>,
+    rown: isize,
+    coln: isize,
+    odd_step_reached: HashSet<Location>,
+    even_step_reached: HashSet<Location>,
 }
 
 impl Map {
@@ -106,7 +118,11 @@ impl Map {
         Self {
             steps_taken: 0,
             plots: plots,
-            current_locations: locations,
+            new_locations: locations.clone(),
+            rown: input.lines().count() as isize,
+            coln: input.lines().next().unwrap().chars().count() as isize,
+            odd_step_reached: HashSet::new(),
+            even_step_reached: locations,
         }
     }
 
@@ -117,13 +133,28 @@ impl Map {
         }
     }
 
+    fn is_valid_infinite(&self, loc: &Location) -> bool {
+        self.is_valid(&loc.mod_sizes(self.rown, self.coln))
+    }
+
     fn step(&mut self) {
         self.steps_taken += 1;
-        self.current_locations = self
-            .current_locations
-            .iter()
-            .flat_map(|loc| loc.adjacents().filter(|new_loc| self.is_valid(&new_loc)))
+
+        let mut reachable: HashSet<Location> = self
+            .new_locations
+            .par_iter()
+            .flat_map_iter(|loc| loc.adjacents().filter(|new_loc| self.is_valid(&new_loc)))
             .collect();
+
+        let step_set = if self.steps_taken % 2 == 0 {
+            &mut self.even_step_reached
+        } else {
+            &mut self.odd_step_reached
+        };
+
+        reachable.retain(|loc| step_set.insert(*loc));
+
+        self.new_locations = reachable;
     }
 
     fn run_steps(&mut self, step_count: usize) {
@@ -132,8 +163,40 @@ impl Map {
         }
     }
 
+    fn step_infinite(&mut self) {
+        self.steps_taken += 1;
+        let mut reachable: HashSet<Location> = self
+            .new_locations
+            .par_iter()
+            .flat_map_iter(|loc| {
+                loc.adjacents()
+                    .filter(|new_loc| self.is_valid_infinite(&new_loc))
+            })
+            .collect();
+
+        let step_set = if self.steps_taken % 2 == 0 {
+            &mut self.even_step_reached
+        } else {
+            &mut self.odd_step_reached
+        };
+
+        reachable.retain(|loc| step_set.insert(*loc));
+
+        self.new_locations = reachable;
+    }
+
+    fn run_steps_infinite(&mut self, step_count: usize) {
+        for _ in 0..step_count {
+            self.step_infinite();
+        }
+    }
+
     fn count_reachable(&self) -> usize {
-        self.current_locations.len()
+        if self.steps_taken % 2 == 0 {
+            self.even_step_reached.len()
+        } else {
+            self.odd_step_reached.len()
+        }
     }
 }
 
@@ -145,4 +208,10 @@ fn part1(text: &str) {
     println!("{}", map.count_reachable());
 }
 
-fn part2(text: &str) {}
+const PART2_STEPS_TO_TAKE: usize = 2_6501_365;
+
+fn part2(text: &str) {
+    let mut map = Map::from_input(text);
+    map.run_steps_infinite(PART2_STEPS_TO_TAKE);
+    println!("{}", map.count_reachable());
+}
