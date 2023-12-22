@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Range, os::unix::process};
+use std::{collections::HashMap, ops::Range};
 
 fn main() {
     let text = include_str!("../input");
@@ -126,7 +126,6 @@ impl RuleSegment {
 }
 
 struct Rule {
-    name: String,
     tests: Vec<RuleSegment>,
     default: String,
 }
@@ -142,7 +141,6 @@ impl Rule {
         (
             name.to_string(),
             Self {
-                name: name.to_string(),
                 tests,
                 default: default.replace("}", "").to_string(),
             },
