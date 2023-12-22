@@ -1,9 +1,6 @@
-use std::{
-    cmp::{max, min},
-    collections::HashMap,
-    str::FromStr,
-    string::ParseError,
-};
+use std::{str::FromStr, string::ParseError};
+
+use itertools::Itertools;
 
 fn main() {
     let text = include_str!("../input");
@@ -13,13 +10,6 @@ fn main() {
 
     println!("\nPart 2:");
     part2(&text);
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-enum Dug {
-    Trench(String),
-    Start,
-    Fill,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -33,15 +23,6 @@ impl Location {
         Self { row, col }
     }
 
-    fn cells_in_dir(&self, dir: Direction, count: usize) -> impl Iterator<Item = Self> + '_ {
-        (1..=count as isize).map(move |m| match dir {
-            Direction::Up => Location::new(self.row + m, self.col),
-            Direction::Down => Location::new(self.row - m, self.col),
-            Direction::Left => Location::new(self.row, self.col - m),
-            Direction::Right => Location::new(self.row, self.col + m),
-        })
-    }
-
     fn cell_in_dir(&self, dir: Direction, count: usize) -> Location {
         let count = count as isize;
         match dir {
@@ -50,21 +31,6 @@ impl Location {
             Direction::Left => Location::new(self.row, self.col - count),
             Direction::Right => Location::new(self.row, self.col + count),
         }
-    }
-
-    fn move_in_dir(&self, dir: Direction) -> Location {
-        self.cell_in_dir(dir, 1)
-    }
-
-    fn adjacents(&self) -> impl Iterator<Item = Self> + '_ {
-        [
-            Direction::Up,
-            Direction::Down,
-            Direction::Left,
-            Direction::Right,
-        ]
-        .iter()
-        .map(|dir| self.move_in_dir(*dir))
     }
 }
 
@@ -127,74 +93,131 @@ impl FromStr for Step {
     }
 }
 
-struct Map {
-    map: HashMap<Location, Dug>,
-    location: Location,
-    uppermost: isize,
-    lowermost: isize,
-    leftmost: isize,
+impl Step {
+    fn from_color(&self) -> Step {
+        let mut color_chars = self.color.chars();
+        let mut dist = 0;
+        for _ in 0..5 {
+            dist = dist * 16 + color_chars.next().and_then(|c| c.to_digit(16)).unwrap();
+        }
+        let dir = match color_chars.next().unwrap() {
+            '0' => Direction::Right,
+            '1' => Direction::Down,
+            '2' => Direction::Left,
+            '3' => Direction::Right,
+            _ => panic!("Unexpected char in from_color"),
+        };
+        assert!(color_chars.next() == None); // should have finished it
+
+        Step {
+            dir,
+            distance: dist as usize,
+            color: "".to_string(),
+        }
+    }
 }
 
-impl Map {
+struct VertexMap {
+    vertices: Vec<Location>,
+    location: Location,
+}
+
+fn normalize(n: isize) -> isize {
+    if n == 0 {
+        0
+    } else {
+        n / n.abs()
+    }
+}
+
+impl VertexMap {
     fn new() -> Self {
-        let mut map = HashMap::new();
-        map.insert(Location::new(0, 0), Dug::Start);
         Self {
-            map,
+            vertices: vec![Location::new(0, 0)],
             location: Location::new(0, 0),
-            uppermost: 0,
-            lowermost: 0,
-            leftmost: 0,
         }
     }
 
     fn run_step(&mut self, step: &Step) {
-        let trench = Dug::Trench(step.color.clone());
-        for loc in self.location.cells_in_dir(step.dir, step.distance) {
-            self.map.insert(loc, trench.clone());
-        }
-        self.location = self.location.cell_in_dir(step.dir, step.distance);
-        self.uppermost = max(self.uppermost, self.location.row);
-        self.lowermost = min(self.lowermost, self.location.row);
-        self.leftmost = min(self.leftmost, self.location.col);
+        let vertex = self.location.cell_in_dir(step.dir, step.distance);
+        self.vertices.push(vertex);
+        self.location = vertex;
+    }
+
+    fn run_step_using_color(&mut self, step: &Step) {
+        self.run_step(&step.from_color());
     }
 
     fn run_input(&mut self, input: &str) {
         for step in input.lines().map(|line| line.parse().unwrap()) {
             self.run_step(&step);
         }
+        self.vertices.pop(); //last vertex is adjacent to the first one, just complicates things
     }
 
-    fn find_interior(&mut self) -> Location {
-        let mut scan = Location::new((self.uppermost + self.lowermost) / 2, self.leftmost);
-        while let None = self.map.get(&scan) {
-            scan.col += 1;
-        }
-
-        // Found the trench, move one more to get to the internals
-        scan.col += 1;
-        scan
-    }
-
-    fn flood_interior(&mut self) {
-        let mut unprocessed = vec![self.find_interior()];
-        while let Some(cell) = unprocessed.pop() {
-            if let None = self.map.insert(cell, Dug::Fill) {
-                unprocessed.extend(cell.adjacents().filter(|loc| self.map.get(loc) == None));
-            }
+    fn run_input_using_color(&mut self, input: &str) {
+        for step in input.lines().map(|line| line.parse().unwrap()) {
+            self.run_step_using_color(&step);
         }
     }
 
-    fn count_pool(&self) -> usize {
-        self.map.len()
+    fn calculate_area(&self) -> f64 {
+        let true_vertices = self
+            .vertices
+            .iter()
+            .circular_tuple_windows()
+            .map(|(prev, current, next)| {
+                let base_row = current.row as f64;
+                let base_col = current.col as f64;
+
+                let rdiff1 = normalize(current.row - prev.row);
+                let cdiff1 = normalize(current.col - prev.col);
+                let rdiff2 = normalize(next.row - current.row);
+                let cdiff2 = normalize(next.col - current.col);
+
+                //println!("({base_row}, {base_col}): {rdiff1}, {cdiff1}, {rdiff2}, {cdiff2}");
+
+                match (rdiff1, cdiff1, rdiff2, cdiff2) {
+                    (0, 1, 1, 0) => (base_row - 0.5, base_col + 0.5),
+                    (0, -1, 1, 0) => (base_row - 0.5, base_col - 0.5),
+                    (0, 1, -1, 0) => (base_row + 0.5, base_col + 0.5),
+                    (0, -1, -1, 0) => (base_row + 0.5, base_col - 0.5),
+                    (1, 0, 0, 1) => (base_row + 0.5, base_col - 0.5),
+                    (-1, 0, 0, 1) => (base_row - 0.5, base_col - 0.5),
+                    (1, 0, 0, -1) => (base_row + 0.5, base_col + 0.5),
+                    (-1, 0, 0, -1) => (base_row - 0.5, base_col + 0.5),
+                    _ => panic!("Invalid differences: {rdiff1}, {cdiff1}, {rdiff2}, {cdiff2}"),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        //println!("{:?}", true_vertices);
+        /*println!(
+            "{:?}",
+            self.vertices
+                .iter()
+                .map(|loc| (*loc).into())
+                .collect::<Vec<(isize, isize)>>()
+        );*/
+
+        true_vertices
+            .iter()
+            .circular_tuple_windows()
+            .fold(0.0, |acc, (current, prev)| {
+                acc + ((prev.0 + current.0) * (prev.1 - current.1))
+            })
+            / 2.0
     }
 }
 
 fn part1(text: &str) {
-    let mut pool = Map::new();
+    let mut pool = VertexMap::new();
     pool.run_input(text);
-    pool.flood_interior();
-    println!("{}", pool.count_pool());
+    println!("{}", pool.calculate_area());
 }
 
-fn part2(_text: &str) {}
+fn part2(text: &str) {
+    let mut pool = VertexMap::new();
+    pool.run_input_using_color(text);
+    println!("{}", pool.calculate_area());
+}
