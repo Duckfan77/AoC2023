@@ -63,7 +63,7 @@ impl ModuleType {
                 }
             }
             ModuleType::Conjunction { source } => {
-                debug_assert!(source.insert(pulse.source, pulse.pulse).is_some());
+                source.insert(pulse.source, pulse.pulse);
                 if source.values().all(|pulse| *pulse == PulseType::High) {
                     Some(PulseType::Low)
                 } else {
@@ -100,6 +100,7 @@ struct ModuleSet {
     pulses: VecDeque<Pulse>,
     low_pulses_sent: u32,
     high_pulses_sent: u32,
+    button_presses: u32,
 }
 
 impl ModuleSet {
@@ -201,18 +202,26 @@ impl ModuleSet {
             pulses: VecDeque::new(),
             low_pulses_sent: 0,
             high_pulses_sent: 0,
+            button_presses: 0,
         }
     }
 
-    fn process_pulse(&mut self, pulse: &Pulse) {
+    fn process_pulse(&mut self, pulse: &Pulse) -> bool {
         if pulse.dest == usize::MAX {
-            return;
+            if pulse.pulse == PulseType::Low {
+                return true;
+            } else {
+                return false;
+            }
         };
         self.pulses
             .append(&mut (self.modules[pulse.dest].process_pulse(&pulse)));
+
+        return false;
     }
 
-    fn press_button(&mut self) {
+    fn press_button(&mut self) -> bool {
+        self.button_presses += 1;
         self.pulses
             .push_back(Pulse::new(self.broadcast, self.broadcast, PulseType::Low));
         while let Some(pulse) = self.pulses.pop_front() {
@@ -221,8 +230,11 @@ impl ModuleSet {
             } else {
                 self.high_pulses_sent += 1;
             }
-            self.process_pulse(&pulse);
+            if self.process_pulse(&pulse) == true {
+                return true;
+            }
         }
+        return false;
     }
 
     fn pulse_product(&self) -> u32 {
@@ -239,4 +251,9 @@ fn part1(text: &str) {
     println!("{}", modules.pulse_product());
 }
 
-fn part2(text: &str) {}
+fn part2(text: &str) {
+    let mut modules = ModuleSet::from_input(text);
+    while !modules.press_button() {}
+
+    println!("{}", modules.button_presses);
+}
